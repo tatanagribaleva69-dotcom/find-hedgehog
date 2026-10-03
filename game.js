@@ -6,6 +6,11 @@ let busy = false;
 let timer;
 const el = id => document.getElementById(id);
 const buttons = [...document.querySelectorAll('[data-answer]')];
+const reaction = document.createElement('div');
+reaction.id = 'reaction';
+reaction.className = 'reaction';
+reaction.setAttribute('aria-hidden', 'true');
+document.body.appendChild(reaction);
 function render() {
   const finished = position === tasks.length;
   el('hero').style.left = `${position / tasks.length * 80}%`;
@@ -24,16 +29,21 @@ function answer(value) {
   if (busy || position === tasks.length) return Promise.resolve({accepted:false,step:position});
   busy = true;
   const correct = value === tasks[position];
+  reaction.textContent = correct ? '😊' : '😢';
+  reaction.className = 'reaction visible';
   buttons.forEach(b => {b.disabled=true;if(b.dataset.answer===value)b.classList.add(correct?'correct':'wrong');});
   el('feedback').textContent = correct ? '😊 Правильно! Идём дальше!' : '😢 Попробуй ещё раз. У тебя получится!';
   return new Promise(resolve => {timer=setTimeout(() => {
+    reaction.className = 'reaction';
     if(correct){position++;render();}else{buttons.forEach(b=>{b.disabled=false;b.classList.remove('wrong');});}
     busy=false;
     resolve({accepted:true,correct,step:position,finished:position===tasks.length});
-  },correct?1300:1600);});
+  },1800);});
 }
 buttons.forEach(b=>b.addEventListener('click',()=>answer(b.dataset.answer)));
 el('restart').addEventListener('click',()=>{clearTimeout(timer);position=0;busy=false;render();buttons[0].focus();});
 render();
 // Поддержка браузеров, в которых доступен WebMCP.
 if(document.modelContext?.registerTool){try{Promise.resolve(document.modelContext.registerTool({name:'answer_shape',description:'Выбрать название текущей фигуры в игре и дождаться результата.',inputSchema:{type:'object',properties:{shape:{type:'string',enum:Object.keys(names)}},required:['shape'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:input=>{if(!input||typeof input!=='object'||Object.keys(input).some(k=>k!=='shape'))throw new Error('Неверный ответ');return answer(input.shape);}})).catch(()=>{});}catch{}}
+
+
